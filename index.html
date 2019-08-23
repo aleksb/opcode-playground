@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<style>
+
+body {
+  padding: 0;
+  margin: 0;
+}
+
+h2 {
+  margin-left: 1em;
+}
+
+.opcode-list {
+  border-collapse: collapse;
+  border: 2px solid black;
+  display: inline-block;
+  vertical-align: top;
+  margin-bottom: 20px;
+}
+.opcode-list th, .opcode-list td {
+  border: 2px solid black;
+  padding: 3px 6px;
+}
+.opcode-list td {
+  padding-right: 30px;
+}
+
+.opcode-matrix {
+  border-collapse: collapse;
+  border: 3px solid black;
+  display: inline-block;
+  vertical-align: top;
+  margin-bottom: 30px;
+}
+.opcode-matrix th, .opcode-matrix td {
+  border: 2px solid black;
+  padding: 3px 6px;
+}
+.opcode-matrix th ~ th, .opcode-matrix td ~ td {
+  border: 1px solid black;
+}
+
+.padder {
+  padding: 30px 50px;
+  margin: auto;
+}
+
+#instrs {
+  padding: 10px 10px 30px;
+}
+
+
+#columns {
+  display: flex;
+  flex-direction: columns;
+}
+#columns .right {
+  margin-left: 20px;
+}
+
+#speeds {
+  font-family: Arial, sans-serif;
+  margin-top: -200px;
+  margin-left: 630px;
+  vertical-align: bottom;
+  padding-bottom: 53px;
+  font-size: 90%;
+}
+#speeds h1 {
+  font-size: 110%;
+  font-weight: bold;
+  margin-bottom: 0px;
+}
+#speeds input[type=range]{
+  width: 120px;
+}
+
+textarea {
+  width: 540px;
+  height: 600px;
+  font-size: larger;
+}
+
+#patch-input {
+  height: 120px;
+}
+
+#buttons {
+  margin-top: -60px;
+  margin-left: 20px;
+}
+#buttons>button {
+  text-align: left;
+  width: 6em;
+}
+#buttons>button#next-jump {
+  width: 9em;
+  margin-right: 6em;
+}
+
+#buttons {
+}
+#buttons>button>span {
+  float: left;
+}
+#buttons>button>span ~ span {
+  float: right;
+}
+/* Show hide run/stop as appropriate */
+#buttons>button#run-stop .stop {
+  display: none;
+}
+#buttons>button#run-stop.running .run {
+  display: none;
+}
+#buttons>button#run-stop.running .stop {
+  display: block;
+}
+
+#memory {
+
+  padding: 1em 2em;
+  margin-top: 5px;
+  background-color: black;
+
+  font-family: monospace;
+  white-space: pre;
+
+  color: white;
+  font-size: larger;
+}
+
+#output {
+  padding: 3px;
+  border: 1px solid black;
+
+  font-family: monospace;
+}
+#output>div {
+  white-space: pre;
+}
+
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.11.0/d3.min.js" charset="utf-8"></script>
+<script src="codepage437.js"></script>
+<script src="machine.js"></script>
+<script src="loader.js"></script>
+<script src="demos.js"></script>
+</head>
+<body><div class="padder">
+
+<h1>Opcode Playground</h1>
+
+
+<div id="instrs">
+  <h2>Instructions</h2>
+  <table class="opcode-list">
+    <tr><th>Opcode</th><th>Mnemonic</th><th>Effect</th></tr>
+    <tr>
+      <td>00</td>
+      <td>BEL</td>
+      <td>Play a tone; the frequency is derived from A</td>
+    </tr>
+    <tr>
+      <td>01</td>
+      <td>NOP</td>
+      <td>Do nothing</td>
+    </tr>
+    <tr>
+      <td>02</td>
+      <td>SWAP</td>
+      <td>Exchange contents of DP and Accumulator</td>
+    </tr>
+    <tr>
+      <td>05</td>
+      <td>NUM</td>
+      <td>Display value in A as decimal number</td>
+    </tr>
+    <tr>
+      <td>06</td>
+      <td>NUMX</td>
+      <td>Display value in A as hexdecimal number</td>
+    </tr>
+    <tr>
+      <td>07</td>
+      <td>JMP (arg)</td>
+      <td>Unconditional jump; next byte is loaded into IP</td>
+    </tr>
+    <tr>
+      <td>08</td>
+      <td>CHAR</td>
+      <td>Print ASCII char based on A</td>
+    </tr>
+    <tr>
+      <td>09</td>
+      <td>NEG</td>
+      <td>Sets A to (256 - A)</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>SETA (arg)</td>
+      <td>Set A to next value after this instruction</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>SETP (arg)</td>
+      <td>Set DP to next value after this instruction</td>
+    </tr>
+    <tr>
+      <td>14</td>
+      <td>ADDA (arg)</td>
+      <td>Adds next value after this instruction to A</td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>ADDP (arg)</td>
+      <td>Adds next value after this instruction to DP</td>
+    </tr>
+    <tr>
+      <td>16</td>
+      <td>SUBA (arg)</td>
+      <td>Subtracts next value after this instruction from A</td>
+    </tr>
+    <tr>
+      <td>17</td>
+      <td>SUBP (arg)</td>
+      <td>Subtracts next value after this instruction from DP</td>
+    </tr>
+    <tr>
+      <td>20</td>
+      <td>LOADA [arg]</td>
+      <td>Load value from specified memory location into A</td>
+    </tr>
+    <tr>
+      <td>21</td>
+      <td>LOADP [arg]</td>
+      <td>Load value from specified memory location into DP</td>
+    </tr>
+    <tr>
+      <td>22</td>
+      <td>STORA [arg]</td>
+      <td>Store contents of A into specified memory location</td>
+    </tr>
+    <tr>
+      <td>23</td>
+      <td>STORP [arg]</td>
+      <td>Store contents of DP into specified memory location</td>
+    </tr>
+    <tr>
+      <td>24</td>
+      <td>LADDA [arg]</td>
+      <td>Adds value from specified memory location to A</td>
+    </tr>
+    <tr>
+      <td>25</td>
+      <td>LADDP [arg]</td>
+      <td>Adds value from specified memory location to DP</td>
+    </tr>
+    <tr>
+      <td>26</td>
+      <td>LSUBA [arg]</td>
+      <td>Subtracts value at specified memory location from A</td>
+    </tr>
+    <tr>
+      <td>27</td>
+      <td>LSUBP [arg]</td>
+      <td>Subtracts value at specified memory location from DP</td>
+    </tr>
+    <tr>
+      <td>40</td>
+      <td>GET</td>
+      <td>Get value from location specified by DP into A</td>
+    </tr>
+    <tr>
+      <td>42</td>
+      <td>PUT</td>
+      <td>Put contents of A into location specified by DP</td>
+    </tr>
+    <tr>
+      <td>44</td>
+      <td>GADD</td>
+      <td>Get value from location specified by DP and add to A</td>
+    </tr>
+    <tr>
+      <td>46</td>
+      <td>GSUB</td>
+      <td>Get value from location specified by DP and subtract from A</td>
+    </tr>
+    <tr>
+      <td>70</td>
+      <td>JZ (arg)</td>
+      <td>Jump if A is zero; otherwise continue as usual</td>
+    </tr>
+    <tr>
+      <td>71</td>
+      <td>JNZ (arg)</td>
+      <td>Jump if A is not zero; otherwise continue as usual</td>
+    </tr>
+    <tr>
+      <td>74</td>
+      <td>JZP (arg)</td>
+      <td>Jump if 0 or positive (0 &lt;= A &lt; 128); otherwise continue as usual</td>
+    </tr>
+    <tr>
+      <td>75</td>
+      <td>JP (arg)</td>
+      <td>Jump if positive (1 &lt;= A &lt; 128); otherwise continue as usual</td>
+    </tr>
+    <tr>
+      <td>94</td>
+      <td>INCA</td>
+      <td>Add 1 to A</td>
+    </tr>
+    <tr>
+      <td>95</td>
+      <td>INCP</td>
+      <td>Add 1 to DP</td>
+    </tr>
+    <tr>
+      <td>96</td>
+      <td>DECA</td>
+      <td>Subtract 1 from A</td>
+    </tr>
+    <tr>
+      <td>97</td>
+      <td>DECP</td>
+      <td>Subtract 1 from DP</td>
+    </tr>
+  </table>
+  <br>
+  All other opcodes are equivalent to HLT (the halt instruction which
+  stops the processor).
+</div>
+
+<div id="columns">
+  <div class="left">
+    <h2>OpcodePlayground Board</h2>
+    <embed id="circuit-board" src="circuit-board.svg" type="image/svg+xml">
+    </embed>
+    <div id="speeds">
+      <h1>Instr. Speed</h1>
+      <input type="range" name="ispeed" min="0" max="7" value=0><br>
+      <div id="ispeed"></div>
+      <h1>Jump Speed</h1>
+      <input type="range" name="jspeed" min="0" max="5" value="0"><br>
+      <div id="jspeed"></div>
+    </div>
+    <div id="buttons">
+
+      <button id="run-stop" onclick="runStopButton();">
+        <span><span class="run">Run</span><span class="stop">Stop</span></span>
+        <span><span class="run">&#x25B6;&nbsp;</span><span class="stop">&#x25A0;&nbsp;</span></span>
+      </button>
+      <button id="step" onclick="stepButton();">
+        <span>Step</span> <span>&#x25AE;&#x25B6;</span>
+      </button>
+      <button id="next-jump" onclick="nextJumpButton();">
+        <span>To next jump</span>
+        <span><strong>&#x21B7;</strong></span>
+      </button>
+      <button id="load" onclick="loadButton();">
+        <span>Load</span> <span><strong>&crarr;&nbsp;</strong></span>
+      </button>
+      <button id="reset" onclick="resetButton();">
+        <span>Reset</span> <span>&#x267B;</span>
+      </button>
+
+
+    </div>
+
+    <div id="memory"></div>
+
+    <p>Program output:</p>
+
+    <div id="output">
+    </div>
+  </div>
+
+
+  <div class="right">
+    <h2>Quick Reference Table</h2>
+    <table class="opcode-matrix">
+      <tr><th></th><th>0x</th><th>1x</th><th>2x</th><th>4x</th><th>7x</th><th>9x</th><th>pattern</th></tr>
+      <tr><td>x0</td><td>BEL</td><td>SETA ()</td><td>LOADA
+          []</td><td>GET</td><td>JZ ()</td><td></td><td> (load into A)</td></tr>
+
+      <tr><td>x1</td><td>NOP</td><td>SETP ()</td><td>LOADP
+          []</td><td></td><td>JNZ ()</td><td></td><td> (load into P)</td></tr>
+      <tr><td>x2</td><td>SWAP</td><td></td><td>STORA
+          []</td><td>PUT</td><td></td><td></td><td> (write A to mem)</td></tr>
+      <tr><td>x3</td><td></td><td></td><td>STORP
+          []</td><td></td><td></td><td></td><td> (write P to mem)</td></tr>
+
+      <tr><td>x4</td><td></td><td>ADDA ()</td><td>LADDA
+          []</td><td>GADD</td><td>JZP ()</td><td>INCA</td><td> (add to A)</td></tr>
+      <tr><td>x5</td><td>NUM</td><td>ADDP ()</td><td>LADDP
+          []</td><td></td><td>JP ()</td><td>INCP</td><td> (add to P)</td></tr>
+
+      <tr><td>x6</td><td>NUMX</td><td>SUBA ()</td><td>LSUBA
+          []</td><td>GSUB</td><td></td><td>DECA</td><td> (subtract from A)</td></tr>
+      <tr><td>x7</td><td>JMP ()</td><td>SUBP ()</td><td>LSUBP
+          []</td><td></td><td></td><td>DECP</td><td> (subtract from P)</td></tr>
+      <tr><td>x8</td><td>CHAR</td><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td>x9</td><td>NEG</td><td></td><td></td><td></td><td></td><td></td></tr>
+    </table>
+
+    <textarea id="main-input" placeholder="# Put your program here, e.g.&#x000a;&#x000a;10 A0&#x000a;0"></textarea>
+    <div>
+      <button id="up-down-demo" onclick="upDownDemoButton();">
+        <span>Up-down Demo</span> &nbsp; <strong>&#x2571;&#x2572;&#x2571;&#x2572;</strong>
+      </button>
+      <button id="circle-demo" onclick="circleDemoButton();">
+        <span>Circle Demo</span> &nbsp; <strong>&#x25EF;</strong>
+      </button>
+      <br>
+      <button id="patch" onclick="patchButton();">
+        <span>Apply patch below</span> &nbsp; <strong>&delta;</strong>
+      </button>
+    </div>
+
+    <textarea id="patch-input"
+      placeholder="# This can be used to overwrite specific&#x000a;# locations, e.g.&#x000a;&#x000a;h 83&#x000a;4"></textarea>
+
+  </div>
+</div>
+
+
+
+
+</div>
+<script src="ui.js"></script>
+
+</body>
+</html>
